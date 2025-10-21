@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        .result { margin: 20px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Simple API Test</h1>
+    <button onclick="testPairing()">Test Pairing API</button>
+    <button onclick="testChat()">Test Chat API</button>
+    <div id="results" class="result"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('results').innerHTML += '<p>' + message + '</p>';
+        }
+
+        async function testPairing() {
+            try {
+                log('Testing Pairing API...');
+                const response = await fetch('http://localhost:8000/api/Pairing/generateCode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: 'test-user-simple' }),
+                });
+                const result = await response.json();
+                log('Pairing API Success: ' + JSON.stringify(result));
+            } catch (error) {
+                log('Pairing API Error: ' + error.message);
+            }
+        }
+
+        async function testChat() {
+            try {
+                log('Testing Chat API...');
+                const createResponse = await fetch('http://localhost:8000/api/ConversationalAgent/createConversation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: 'test-user-simple', context: 'test' }),
+                });
+                const createResult = await createResponse.json();
+                log('Create Conversation: ' + JSON.stringify(createResult));
+                
+                if (createResult.status === 'success') {
+                    const conversationId = createResult.conversation._id;
+                    const messageResponse = await fetch('http://localhost:8000/api/ConversationalAgent/sendUserMessage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ conversationId, content: 'Hello from simple test!' }),
+                    });
+                    const messageResult = await messageResponse.json();
+                    log('Send Message: ' + JSON.stringify(messageResult));
+                }
+            } catch (error) {
+                log('Chat API Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
