@@ -185,6 +185,67 @@ This project is licensed under the MIT License.
 
 - [Amimi Backend](https://github.com/JaredHLZhang/Amimi_backend_61040) - Deno backend with concept architecture
 
+## 📋 Assignment 2 Submission Files
+
+All required files for Assignment 2 submission are located in this repository:
+
+### Required Documents
+
+1. **User Journey** - [user-journey.md](user-journey.md)
+   - One-paragraph narrative of Alice and Bob's journey with Amimi
+   - Demonstrates pairing, private chat, and shared chat features
+   - Covers the complete user experience from sign-up to relationship growth
+
+2. **Screen Recording** - [Screen Recording - Final Check.mov](Screen%20Recording%20-%20Final%20Check.mov)
+   - Final 2-minute demonstration of the user journey
+   - Narrated walkthrough of key features
+   - Shows: sign up, pairing, private chat with AI, shared chat with @Amimi
+   - Demonstrates the beautiful sunset-themed UI with Amimi cloud character
+   - Highlights real-time message synchronization and natural AI responses
+
+3. **Visual Design Study - Color** - [color-design-research.png](color-design-research.png)
+   - Collage of 5 inspiring images with sunset themes
+   - Extracted color palettes from each image
+   - Annotations highlighting design choices
+   - Focus on romantic, warm sunset colors (purples, oranges, blues, yellows, reds)
+
+4. **Visual Design Study - Typography** - [font-design-research.png](font-design-research.png)
+   - Two sections: Display fonts and Amimi fonts
+   - Diverse examples from visual media
+   - Annotations explaining font characteristics
+   - Emphasis on readability vs. distinct, cute, handwritten styles
+
+### Source Code & Implementation
+
+- **Main Application**: [src/App-working.vue](src/App-working.vue) - Complete application in single component
+- **API Client**: [src/api/](src/api/)
+  - [client.ts](src/api/client.ts) - HTTP client configuration
+  - [pairing.ts](src/api/pairing.ts) - Pairing API calls
+  - [conversationalAgent.ts](src/api/conversationalAgent.ts) - Private chat API
+  - [groupConversation.ts](src/api/groupConversation.ts) - Shared chat API
+- **Assets**:
+  - [Amimi Cloud Character (basic)](src/assets/Amimi-cloud.png)
+  - [Amimi Cloud Character (writing)](src/assets/Amimi-cloud-write.png)
+- **API Specification**: [src/api-spec.md](src/api-spec.md) - Copied from backend
+
+### Design Implementation
+
+The UI implements the visual design study:
+- **Colors**: Sunset-inspired palette (creams, corals, purples, blues, oranges)
+- **Typography**: Single Day font for Amimi messages (handwritten/cute style)
+- **Layout**: Gradient backgrounds, rounded corners, soft shadows, decorative elements
+- **Character IP**: Amimi cloud character integrated throughout UI
+
+### Feature Highlights
+
+- ✅ Beautiful sunset-themed romantic UI
+- ✅ Amimi cloud character animations
+- ✅ Real-time message synchronization for shared chat
+- ✅ @Amimi mention feature (only responds when mentioned)
+- ✅ Private and shared chat modes
+- ✅ Natural, empathetic AI responses
+- ✅ Responsive design for all screen sizes
+
 ## 📞 Support
 
 For support or questions, please open an issue in the repository.
