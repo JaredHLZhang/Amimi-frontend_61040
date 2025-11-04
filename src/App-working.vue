@@ -329,12 +329,13 @@ const lastSharedMessageId = ref(null); // Track last shared message ID for polli
 // API functions
 async function apiCall(endpoint, body) {
   try {
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
     // Include session token in all requests except login/register
     const requestBody = endpoint.includes('/Sessioning/register') || endpoint.includes('/Sessioning/login')
       ? body
       : { ...body, session: sessionToken.value };
     
-    const response = await fetch(`http://localhost:8000/api${endpoint}`, {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
