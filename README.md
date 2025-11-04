@@ -92,12 +92,12 @@ Vue.js frontend application for Amimi - an AI-powered relationship companion.
 
 2. **Install dependencies**
    ```bash
-   npm install
+   yarn install
    ```
 
 3. **Start the development server**
    ```bash
-   npm run dev
+   yarn dev
    ```
 
 4. **Open your browser**
@@ -187,14 +187,14 @@ The application is fully responsive and works on:
 
 ### Build for Production
 ```bash
-npm run build
+yarn; yarn build
 ```
 
 ### Deploy to Render
 Amimi frontend can be deployed to Render, Vercel, Netlify, or any static hosting platform:
 
 ```bash
-npm run build
+yarn; yarn build
 # Deploy the dist/ folder to your preferred platform
 ```
 
