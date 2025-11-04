@@ -2,11 +2,22 @@
 
 Vue.js frontend application for Amimi - an AI-powered relationship companion.
 
-## 📋 Assignment 2 Submission Files
 
-All required files for Assignment 2 submission are located in this repository:
+### Documentation for Assignment 4C
 
-### Required Documents
+1. **Design Document** - [DESIGN_DOCUMENT.md](DESIGN_DOCUMENT.md)
+   - Summarizes how final design differs from Assignment 2 and Assignment 4b
+   - Documents concept design evolution, visual design implementation, and architecture changes
+   - Links to backend concept specifications and synchronization patterns
+
+2. **Project Reflection** - [REFLECTION.md](REFLECTION.md)
+   - Reflection on project experience, challenges, and learnings
+   - Documents skills acquired and areas for improvement
+   - Discusses use of Context tool and agentic coding tools
+   - Conclusions about LLMs in software development
+
+
+### Previous Required Documents
 
 1. **User Journey** - [user-journey.md](user-journey.md)
    - One-paragraph narrative of Alice and Bob's journey with Amimi
@@ -47,12 +58,12 @@ All required files for Assignment 2 submission are located in this repository:
 
 ## 🌟 Features
 
-- **User Authentication**: Simple sign-up and user management
+- **Email/Password Authentication**: Secure login and registration
 - **Partner Pairing**: Code-based pairing system to connect with your partner
 - **AI Chat**: Real-time chat with Gemini AI for relationship support
 - **Responsive Design**: Modern, mobile-friendly interface
-- **State Management**: Persistent user state with localStorage
-- **Debug Tools**: Built-in API testing utilities
+- **State Management**: Persistent sessions with localStorage
+- **Shared Chat**: Multi-user conversations with automatic AI responses
 
 
 ## 🛠️ Tech Stack
@@ -116,9 +127,10 @@ src/
 ## 🎯 Core Features
 
 ### User Authentication
-- Simple sign-up process
-- Persistent user sessions
-- User state management
+- Email/password registration
+- Secure login with session tokens
+- Session management and logout
+- Automatic session validation
 
 ### Partner Pairing
 - Generate unique pairing codes
@@ -165,13 +177,11 @@ The application is fully responsive and works on:
 ## 🧪 Testing
 
 ### Manual Testing
-1. **Sign Up**: Create a new user account
-2. **Pairing**: Generate and share pairing codes
-3. **Chat**: Send messages to Amimi AI
-4. **Debug**: Use debug tools to test API endpoints
-
-### Debug Mode
-Access debug tools by clicking "Debug APIs" on the home page when not signed in.
+1. **Register**: Create a new user account with email/password
+2. **Login**: Sign in with credentials
+3. **Pairing**: Generate and share pairing codes
+4. **Chat**: Send messages to Amimi AI
+5. **Shared Chat**: Test @Amimi mention feature
 
 ## 🚀 Deployment
 
@@ -180,26 +190,25 @@ Access debug tools by clicking "Debug APIs" on the home page when not signed in.
 npm run build
 ```
 
-### Deploy to GitHub Pages
-```bash
-npm run build
-# Deploy the dist/ folder to GitHub Pages
-```
+### Deploy to Render
+Amimi frontend can be deployed to Render, Vercel, Netlify, or any static hosting platform:
 
-### Deploy to Vercel/Netlify
 ```bash
 npm run build
 # Deploy the dist/ folder to your preferred platform
 ```
 
+**Note**: Update API base URL for production deployment.
+
 ## 🔗 API Integration
 
 The frontend integrates with the Amimi Backend API:
 
-- **Base URL**: `http://localhost:8000/api`
-- **Authentication**: User ID-based
+- **Base URL**: `http://localhost:8000/api` (configurable)
+- **Authentication**: Session token-based (email/password)
 - **CORS**: Configured for localhost development
 - **Error Handling**: Comprehensive error handling and user feedback
+- **Session Management**: Automatic token injection in API calls
 
 ## 🎨 UI/UX Features
 
@@ -237,8 +246,9 @@ The UI implements the visual design study:
 
 - ✅ Beautiful sunset-themed romantic UI
 - ✅ Amimi cloud character animations
+- ✅ Email/password authentication
 - ✅ Real-time message synchronization for shared chat
-- ✅ @Amimi mention feature (only responds when mentioned)
+- ✅ @Amimi mention feature (auto-triggers AI in backend)
 - ✅ Private and shared chat modes
 - ✅ Natural, empathetic AI responses
 - ✅ Responsive design for all screen sizes

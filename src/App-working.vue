@@ -37,18 +37,79 @@
         </div>
         
         <div v-if="!userId" class="home-actions">
-          <button @click="signUp" class="primary-btn home-signup-btn" :disabled="loading">
-            {{ loading ? 'Creating Account...' : '✨ Start Your Journey' }}
-          </button>
-          <button @click="debugAPIs" class="debug-btn" :disabled="loading">
-            Debug APIs
-          </button>
+          <div v-if="!showRegister && !showLogin">
+            <button @click="showRegister = true" class="primary-btn home-signup-btn" :disabled="loading">
+              ✨ Create Account
+            </button>
+            <button @click="showLogin = true" class="secondary-btn" :disabled="loading">
+              Login
+            </button>
+          </div>
+
+          <!-- Register Form -->
+          <div v-if="showRegister" class="auth-form">
+            <h3>Create Account</h3>
+            <input 
+              v-model="registerName" 
+              type="text" 
+              placeholder="Your Name" 
+              class="auth-input"
+              :disabled="loading"
+            />
+            <input 
+              v-model="registerEmail" 
+              type="email" 
+              placeholder="Email" 
+              class="auth-input"
+              :disabled="loading"
+            />
+            <input 
+              v-model="registerPassword" 
+              type="password" 
+              placeholder="Password (min 6 chars)" 
+              class="auth-input"
+              :disabled="loading"
+            />
+            <div v-if="authError" class="error-message">{{ authError }}</div>
+            <button @click="register" class="primary-btn" :disabled="loading">
+              {{ loading ? 'Creating...' : 'Register' }}
+            </button>
+            <button @click="showRegister = false; authError = ''" class="secondary-btn" :disabled="loading">
+              Back
+            </button>
+          </div>
+
+          <!-- Login Form -->
+          <div v-if="showLogin" class="auth-form">
+            <h3>Login</h3>
+            <input 
+              v-model="loginEmail" 
+              type="email" 
+              placeholder="Email" 
+              class="auth-input"
+              :disabled="loading"
+            />
+            <input 
+              v-model="loginPassword" 
+              type="password" 
+              placeholder="Password" 
+              class="auth-input"
+              :disabled="loading"
+            />
+            <div v-if="authError" class="error-message">{{ authError }}</div>
+            <button @click="login" class="primary-btn" :disabled="loading">
+              {{ loading ? 'Logging in...' : 'Login' }}
+            </button>
+            <button @click="showLogin = false; authError = ''" class="secondary-btn" :disabled="loading">
+              Back
+            </button>
+          </div>
         </div>
         
         <div v-else class="home-welcome-back">
           <div class="welcome-card">
             <h2 class="welcome-title">Welcome back! 👋</h2>
-            <p class="welcome-text">You're signed in as: <strong>{{ userId }}</strong></p>
+            <p class="welcome-text">You're signed in as: <strong>{{ userName || userId }}</strong></p>
             <div class="welcome-actions">
               <button @click="currentView = 'pairing'" class="primary-btn" v-if="!isPaired">
                 💑 Find Your Partner
@@ -227,9 +288,21 @@ import AmimiCloudWrite from './assets/Amimi-cloud-write.png';
 
 // State
 const currentView = ref('home');
-const userId = ref(localStorage.getItem('userId'));
+const sessionToken = ref(localStorage.getItem('sessionToken'));
+const userId = ref(localStorage.getItem('userId')); // Keep for display purposes
+const userName = ref(localStorage.getItem('userName')); // User's name from registration
 const isPaired = ref(localStorage.getItem('isPaired') === 'true');
 const loading = ref(false);
+
+// Auth UI state
+const showRegister = ref(false);
+const showLogin = ref(false);
+const registerEmail = ref('');
+const registerPassword = ref('');
+const registerName = ref('');
+const loginEmail = ref('');
+const loginPassword = ref('');
+const authError = ref('');
 
 // Pairing state
 const generatedCode = ref('');
@@ -241,20 +314,30 @@ const messageType = ref('success');
 const chatMode = ref('private'); // 'private' or 'shared'
 const messages = ref([]);
 const newMessage = ref('');
-const conversationId = ref(localStorage.getItem('conversationId'));
+// Ensure conversationId is always a string, not an Object
+const storedConvId = localStorage.getItem('conversationId');
+const conversationId = ref(storedConvId ? String(storedConvId) : null);
 const sharedMessages = ref([]);
-const sharedConversationId = ref(localStorage.getItem('sharedConversationId'));
+// Ensure sharedConversationId is always a string
+const storedSharedConvId = localStorage.getItem('sharedConversationId');
+const sharedConversationId = ref(storedSharedConvId ? String(storedSharedConvId) : null);
 const partnerId = ref(localStorage.getItem('partnerId'));
 const pollingInterval = ref(null); // Timer for polling
 const lastMessageTimestamp = ref(null); // Track last message time
+const lastSharedMessageId = ref(null); // Track last shared message ID for polling
 
 // API functions
 async function apiCall(endpoint, body) {
   try {
+    // Include session token in all requests except login/register
+    const requestBody = endpoint.includes('/Sessioning/register') || endpoint.includes('/Sessioning/login')
+      ? body
+      : { ...body, session: sessionToken.value };
+    
     const response = await fetch(`http://localhost:8000/api${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     });
     return await response.json();
   } catch (error) {
@@ -262,50 +345,126 @@ async function apiCall(endpoint, body) {
   }
 }
 
-// User functions
-function signUp() {
+// User authentication functions
+async function register() {
+  if (!registerEmail.value || !registerPassword.value || !registerName.value) {
+    authError.value = 'Please fill in all fields';
+    return;
+  }
+
   loading.value = true;
+  authError.value = '';
+
   try {
-    const newUserId = `user-${crypto.randomUUID()}`;
-    userId.value = newUserId;
-    localStorage.setItem('userId', newUserId);
-    currentView.value = 'pairing';
+    const result = await apiCall('/Sessioning/register', {
+      email: registerEmail.value,
+      password: registerPassword.value,
+      name: registerName.value,
+    });
+
+    if (result.user && result.session) {
+      sessionToken.value = result.session;
+      userId.value = result.user;
+      localStorage.setItem('sessionToken', result.session);
+      localStorage.setItem('userId', result.user);
+      
+      // Fetch user info to get the name
+      try {
+        const userInfo = await apiCall('/Sessioning/getUserInfo', { session: result.session });
+        if (userInfo.name) {
+          userName.value = userInfo.name;
+          localStorage.setItem('userName', userInfo.name);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user name:', err);
+      }
+      
+      showRegister.value = false;
+      registerEmail.value = '';
+      registerPassword.value = '';
+      registerName.value = '';
+      currentView.value = 'pairing';
+    } else {
+      authError.value = result.error || 'Registration failed';
+    }
   } catch (error) {
-    console.error('Error signing up:', error);
-    alert('Failed to create account. Please try again.');
+    console.error('Error registering:', error);
+    authError.value = 'Failed to create account. Please try again.';
   } finally {
     loading.value = false;
   }
 }
 
-function logout() {
+async function login() {
+  if (!loginEmail.value || !loginPassword.value) {
+    authError.value = 'Please fill in email and password';
+    return;
+  }
+
+  loading.value = true;
+  authError.value = '';
+
+  try {
+    const result = await apiCall('/Sessioning/login', {
+      email: loginEmail.value,
+      password: loginPassword.value,
+    });
+
+    if (result.user && result.session) {
+      sessionToken.value = result.session;
+      userId.value = result.user;
+      localStorage.setItem('sessionToken', result.session);
+      localStorage.setItem('userId', result.user);
+      
+      // Fetch user info to get the name
+      try {
+        const userInfo = await apiCall('/Sessioning/getUserInfo', { session: result.session });
+        if (userInfo.name) {
+          userName.value = userInfo.name;
+          localStorage.setItem('userName', userInfo.name);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user name:', err);
+      }
+      
+      showLogin.value = false;
+      loginEmail.value = '';
+      loginPassword.value = '';
+      currentView.value = 'pairing';
+    } else {
+      authError.value = result.error || 'Login failed';
+    }
+  } catch (error) {
+    console.error('Error logging in:', error);
+    authError.value = 'Failed to login. Please try again.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function logout() {
+  loading.value = true;
   stopPolling(); // Stop polling before clearing state
+  
+  try {
+    if (sessionToken.value) {
+      await apiCall('/Sessioning/logout', { session: sessionToken.value });
+    }
+  } catch (error) {
+    console.error('Error during logout:', error);
+  }
+
+  // Clear all state
+  sessionToken.value = null;
   userId.value = null;
+  userName.value = null;
   isPaired.value = false;
   conversationId.value = null;
+  sharedConversationId.value = null;
+  partnerId.value = null;
   localStorage.clear();
   currentView.value = 'home';
-}
-
-// Debug function
-async function debugAPIs() {
-  loading.value = true;
-  try {
-    console.log('Testing Pairing API...');
-    const pairingResult = await apiCall('/Pairing/generateCode', { user: 'debug-test-user' });
-    console.log('Pairing API result:', pairingResult);
-    
-    console.log('Testing Chat API...');
-    const chatResult = await apiCall('/ConversationalAgent/createConversation', { userId: 'debug-test-user', context: 'debug test' });
-    console.log('Chat API result:', chatResult);
-    
-    alert('Debug complete! Check console for results.');
-  } catch (error) {
-    console.error('Debug error:', error);
-    alert('Debug failed: ' + error.message);
-  } finally {
-    loading.value = false;
-  }
+  loading.value = false;
 }
 
 // Pairing functions
@@ -358,6 +517,9 @@ async function acceptCode() {
           localStorage.setItem('partnerId', pairResult.partner);
         }
       }
+      
+      // Load shared conversation and start polling
+      await loadSharedConversation();
       
       message.value = 'Successfully paired with your partner!';
       messageType.value = 'success';
@@ -422,22 +584,41 @@ async function checkPairingStatus() {
 
 // Chat functions
 async function loadConversation() {
-  if (!userId.value) return;
+  // Ensure user is authenticated
+  if (!userId.value || !sessionToken.value) {
+    console.log('Cannot load conversation: user not authenticated', { userId: userId.value, hasSession: !!sessionToken.value });
+    return;
+  }
 
   try {
-    if (conversationId.value) {
-      const historyResult = await apiCall('/ConversationalAgent/getHistory', { conversationId: conversationId.value });
+    // First, try to load existing conversation from localStorage
+    const storedConvId = localStorage.getItem('conversationId');
+    if (storedConvId && storedConvId !== 'null') {
+      conversationId.value = String(storedConvId);
+      const convIdString = conversationId.value;
+      const historyResult = await apiCall('/ConversationalAgent/getHistory', { conversationId: convIdString });
       if (historyResult.status === 'success') {
-        messages.value = historyResult.messages;
+        messages.value = historyResult.messages || [];
+        console.log('Loaded existing conversation:', conversationId.value);
         return;
+      } else {
+        // Conversation might not exist anymore, clear it and create new one
+        console.log('Existing conversation not found, creating new one');
+        conversationId.value = null;
+        localStorage.removeItem('conversationId');
       }
     }
 
+    // Create new conversation
+    console.log('Creating new conversation for user:', userId.value);
     const result = await apiCall('/ConversationalAgent/createConversation', { userId: userId.value, context: 'User is looking for relationship support and guidance' });
     if (result.status === 'success') {
-      conversationId.value = result.conversation._id;
+      // Convert ObjectId to string - ensure it's always a string
+      const id = result.conversation._id?.toString() || result.conversation._id || result.conversation.conversationId;
+      conversationId.value = String(id); // Force to string
       localStorage.setItem('conversationId', conversationId.value);
       messages.value = [];
+      console.log('Created new conversation:', conversationId.value);
     } else {
       console.error('Failed to create conversation:', result.error);
     }
@@ -463,16 +644,25 @@ async function loadSharedConversation() {
 
     // Load history if we have a shared conversation
     if (sharedConversationId.value) {
-      const historyResult = await apiCall('/GroupConversation/getHistory', { conversationId: sharedConversationId.value });
+      const convIdString = sharedConversationId.value?.toString() || sharedConversationId.value || '';
+      const historyResult = await apiCall('/GroupConversation/getHistory', { conversationId: convIdString });
       if (historyResult.status === 'success') {
         sharedMessages.value = historyResult.messages || [];
+        // Initialize last message ID for polling
+        if (sharedMessages.value.length > 0) {
+          const lastMsg = sharedMessages.value[sharedMessages.value.length - 1];
+          lastSharedMessageId.value = lastMsg.messageId || lastMsg._id;
+        }
       }
       
       // Start polling after loading shared conversation
-      startPolling();
+      if (chatMode.value === 'shared') {
+        startPolling();
+      }
     } else {
       console.log('No shared conversation found yet');
       sharedMessages.value = [];
+      lastSharedMessageId.value = null;
     }
   } catch (error) {
     console.error('Error loading shared conversation:', error);
@@ -486,16 +676,33 @@ async function pollSharedMessages() {
   }
 
   try {
+    const convIdString = sharedConversationId.value?.toString() || sharedConversationId.value || '';
     const historyResult = await apiCall('/GroupConversation/getHistory', { 
-      conversationId: sharedConversationId.value 
+      conversationId: convIdString 
     });
     
     if (historyResult.status === 'success') {
       const newMessages = historyResult.messages || [];
       
-      // Only update if we have new messages
-      if (newMessages.length > sharedMessages.value.length) {
+      // Use messageId comparison to detect new messages
+      const currentLastMessageId = newMessages.length > 0 
+        ? (newMessages[newMessages.length - 1].messageId || newMessages[newMessages.length - 1]._id)
+        : null;
+      
+      // Check if we have new messages by comparing last message ID
+      const hasNewMessages = !lastSharedMessageId.value || 
+        (currentLastMessageId && currentLastMessageId !== lastSharedMessageId.value);
+      
+      if (hasNewMessages && newMessages.length > 0) {
         sharedMessages.value = newMessages;
+        lastSharedMessageId.value = currentLastMessageId;
+        
+        // Check if the latest message is from Amimi - if so, clear loading animation
+        const latestMessage = newMessages[newMessages.length - 1];
+        if (latestMessage && latestMessage.isFromAgent) {
+          loading.value = false;
+          console.log('Amimi response detected in polling, clearing loading animation');
+        }
         
         // Scroll to bottom when new messages arrive
         setTimeout(() => {
@@ -535,9 +742,25 @@ async function sendMessage() {
   if (!messageText || loading.value) return;
 
   // Check for conversation ID based on mode
-  const currentConvId = chatMode.value === 'shared' ? sharedConversationId.value : conversationId.value;
-  if (!currentConvId) {
-    console.log('Cannot send message: no conversation ID', { mode: chatMode.value });
+  let currentConvId = chatMode.value === 'shared' ? sharedConversationId.value : conversationId.value;
+  
+  // If no conversation ID in private mode, try to create/load one
+  if (!currentConvId && chatMode.value === 'private' && userId.value && sessionToken.value) {
+    console.log('No conversation ID found, attempting to create/load conversation...');
+    await loadConversation();
+    currentConvId = conversationId.value;
+  }
+  
+  // Convert to string if it's an Object
+  const convIdString = currentConvId?.toString() || currentConvId || '';
+  if (!convIdString) {
+    console.log('Cannot send message: no conversation ID', { 
+      mode: chatMode.value, 
+      conversationId: conversationId.value, 
+      sharedConversationId: sharedConversationId.value,
+      userId: userId.value,
+      hasSession: !!sessionToken.value
+    });
     return;
   }
 
@@ -547,20 +770,32 @@ async function sendMessage() {
 
   try {
     // Add user message to UI immediately
-    const userMessage = {
-      messageId: `temp-${Date.now()}`,
-      conversationId: currentConvId,
-      isFromUser: true,
-      content: messageText,
-      timestamp: new Date().toISOString()
-    };
+    const userMessage = chatMode.value === 'shared' 
+      ? {
+          messageId: `temp-${Date.now()}`,
+          conversationId: convIdString,
+          sender: String(userId.value),
+          isFromAgent: false,
+          content: messageText,
+          timestamp: new Date().toISOString()
+        }
+      : {
+          messageId: `temp-${Date.now()}`,
+          conversationId: convIdString,
+          isFromUser: true,
+          content: messageText,
+          timestamp: new Date().toISOString()
+        };
     currentMessages.value.push(userMessage);
 
     // Send message to backend - different API based on mode
     if (chatMode.value === 'shared') {
-      // Shared chat
+      // Shared chat - don't show loading for regular message sends
+      // Check if message contains @Amimi - if so, keep loading until response arrives
+      const hasAmimiMention = messageText.includes('@Amimi');
+      
       const sendResult = await apiCall('/GroupConversation/sendMessage', { 
-        conversationId: currentConvId, 
+        conversationId: convIdString, 
         sender: userId.value,
         content: messageText 
       });
@@ -568,46 +803,37 @@ async function sendMessage() {
         const messageIndex = currentMessages.value.findIndex(m => m.messageId === userMessage.messageId);
         if (messageIndex !== -1) {
           const realMessage = {
-            messageId: sendResult.message._id,
-            conversationId: sendResult.message.conversationId,
-            sender: sendResult.message.sender,
+            messageId: sendResult.message.messageId || sendResult.message._id?.toString() || sendResult.message._id,
+            conversationId: sendResult.message.conversationId?.toString() || sendResult.message.conversationId,
+            sender: String(sendResult.message.sender || userId.value),
             isFromAgent: sendResult.message.isFromAgent,
             content: sendResult.message.content,
             timestamp: sendResult.message.timestamp
           };
           currentMessages.value[messageIndex] = realMessage;
         }
+      } else {
+        // Error sending - clear loading
+        loading.value = false;
       }
-
-      // Only get agent response if message contains @Amimi
-      if (messageText.includes('@Amimi')) {
-        const responseResult = await apiCall('/GroupConversation/getAgentResponse', { 
-          conversationId: currentConvId, 
-          contextPrompt: messageText.replace('@Amimi', '').trim() // Remove @Amimi from prompt
-        });
-        if (responseResult.status === 'success') {
-          const agentMessage = {
-            messageId: responseResult.message._id,
-            conversationId: responseResult.message.conversationId,
-            sender: responseResult.message.sender,
-            isFromAgent: responseResult.message.isFromAgent,
-            content: responseResult.message.content,
-            timestamp: responseResult.message.timestamp
-          };
-          currentMessages.value.push(agentMessage);
-        }
+      
+      // Only clear loading if there's no @Amimi mention
+      // If @Amimi is mentioned, keep loading until polling detects the response
+      if (!hasAmimiMention) {
+        loading.value = false;
       }
+      // @Amimi check is now handled by backend sync - polling will detect response and clear loading
     } else {
-      // Private chat
+      // Private chat - show loading while waiting for AI response
       const sendResult = await apiCall('/ConversationalAgent/sendUserMessage', { 
-        conversationId: currentConvId, 
+        conversationId: convIdString, 
         content: messageText 
       });
       if (sendResult.status === 'success') {
         const messageIndex = currentMessages.value.findIndex(m => m.messageId === userMessage.messageId);
         if (messageIndex !== -1) {
           const realMessage = {
-            messageId: sendResult.message._id,
+            messageId: sendResult.message._id?.toString() || sendResult.message._id,
             conversationId: sendResult.message.conversationId,
             isFromUser: sendResult.message.isFromUser,
             content: sendResult.message.content,
@@ -617,14 +843,14 @@ async function sendMessage() {
         }
       }
 
-      // Get agent response for private chat
+      // Get agent response for private chat - keep loading true while waiting
       const responseResult = await apiCall('/ConversationalAgent/getAgentResponse', { 
-        conversationId: currentConvId, 
+        conversationId: convIdString, 
         userMessageContent: messageText 
       });
       if (responseResult.status === 'success') {
         const agentMessage = {
-          messageId: responseResult.message._id,
+          messageId: responseResult.message._id?.toString() || responseResult.message._id,
           conversationId: responseResult.message.conversationId,
           isFromUser: responseResult.message.isFromUser,
           content: responseResult.message.content,
@@ -632,19 +858,23 @@ async function sendMessage() {
         };
         currentMessages.value.push(agentMessage);
       }
+      // Clear loading after AI response (or error)
+      loading.value = false;
     }
   } catch (error) {
     console.error('Error sending message:', error);
+    loading.value = false; // Clear loading on error
+    const currentConvId = chatMode.value === 'shared' ? sharedConversationId.value : conversationId.value;
+    const convIdString = currentConvId?.toString() || currentConvId || '';
     currentMessages.value.push({
       messageId: `error-${Date.now()}`,
-      conversationId: currentConvId || '',
+      conversationId: convIdString,
       isFromUser: false,
       content: 'Sorry, I encountered an error. Please try again.',
       timestamp: new Date().toISOString()
     });
-  } finally {
-    loading.value = false;
   }
+  // Note: loading is cleared in each branch (shared chat immediately, private chat after AI response)
 }
 
 function formatTime(timestamp) {
@@ -655,9 +885,13 @@ function formatTime(timestamp) {
 function getSenderName(message) {
   if (chatMode.value === 'shared') {
     if (message.isFromAgent) return 'Amimi';
-    if (message.sender === userId.value) return 'You';
-    if (message.sender === partnerId.value) return 'Your Partner';
-    return message.sender || 'Unknown';
+    // Ensure consistent string comparison
+    const messageSender = String(message.sender || '');
+    const currentUserId = String(userId.value || '');
+    const currentPartnerId = String(partnerId.value || '');
+    if (messageSender === currentUserId) return 'You';
+    if (messageSender === currentPartnerId) return 'Your Partner';
+    return messageSender || 'Unknown';
   } else {
     return message.isFromUser ? 'You' : 'Amimi';
   }
@@ -666,7 +900,10 @@ function getSenderName(message) {
 function getMessageClass(message) {
   if (chatMode.value === 'shared') {
     if (message.isFromAgent) return 'agent-message';
-    if (message.sender === userId.value) return 'user-message';
+    // Ensure consistent string comparison for sender/userId
+    const messageSender = String(message.sender || '');
+    const currentUserId = String(userId.value || '');
+    if (messageSender === currentUserId) return 'user-message';
     return 'partner-message';
   } else {
     return message.isFromUser ? 'user-message' : 'agent-message';
@@ -694,9 +931,25 @@ watch(chatMode, (newMode) => {
 });
 
 onMounted(async () => {
-  if (userId.value) {
-    loadConversation();
+  // Only load conversation and check pairing if user is authenticated
+  if (userId.value && sessionToken.value) {
+    // Load user name if not already loaded
+    if (!userName.value && sessionToken.value) {
+      try {
+        const userInfo = await apiCall('/Sessioning/getUserInfo', { session: sessionToken.value });
+        if (userInfo.name) {
+          userName.value = userInfo.name;
+          localStorage.setItem('userName', userInfo.name);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user name:', err);
+      }
+    }
+    
+    await loadConversation(); // Wait for conversation to load
     await checkPairingStatus(); // Check with backend if user is paired
+  } else {
+    console.log('User not authenticated on mount', { userId: userId.value, hasSession: !!sessionToken.value });
   }
 });
 
@@ -1021,6 +1274,85 @@ body {
 .welcome-actions {
   display: flex;
   justify-content: center;
+}
+
+/* Auth Forms */
+.auth-form {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 25px;
+  box-shadow: 0 10px 40px rgba(200, 162, 200, 0.15);
+  border: 2px solid rgba(255, 182, 193, 0.2);
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: slideUp 0.5s ease-out;
+}
+
+.auth-form h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text-heading);
+  font-size: 1.8rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.auth-input {
+  padding: 0.875rem 1.25rem;
+  border: 2px solid var(--color-purple-light);
+  border-radius: 15px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--color-coral);
+  box-shadow: 0 0 0 3px rgba(255, 123, 115, 0.1);
+}
+
+.auth-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: var(--color-coral);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: rgba(255, 123, 115, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 123, 115, 0.3);
+}
+
+.secondary-btn {
+  background: white;
+  color: var(--color-coral);
+  border: 2px solid var(--color-coral);
+  padding: 0.875rem 2rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: rgba(255, 123, 115, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 123, 115, 0.3);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Decorative Elements */
