@@ -16,6 +16,18 @@ Vue.js frontend application for Amimi - an AI-powered relationship companion.
    - Discusses use of Context tool and agentic coding tools
    - Conclusions about LLMs in software development
 
+3. **Final Video Demonstration** - [Assginment 4C Video.mov](Assginment%204C%20Video.mov)
+   - Short video (up to 3 minutes) showing the app in use
+   - Highlights key features with audio narration
+   - Demonstrates complete user journey: registration, pairing, private chat, and shared chat with @Amimi mention
+   - Shows the deployed application on Render
+
+4. **Backend Console Trace** - [backend-trace.txt](backend-trace.txt)
+   - Complete trace of incoming actions to the backend during video demonstration
+   - Captured from Render dashboard console logs
+   - Shows all API requests, synchronizations, and responses
+   - Demonstrates authentication, pairing, conversation creation, message sending, and @Amimi mention triggering
+
 
 ### Previous Required Documents
 
