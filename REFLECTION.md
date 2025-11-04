@@ -100,7 +100,7 @@
 - **AI Prompt Engineering**: Crafting prompts for empathetic, natural conversations
 - **API Design**: RESTful endpoints, authentication patterns, error handling
 
-### Problem-Solving Skills
+### Problem-Solving Skills (Work with LLM)
 
 - **Debugging Syncs**: Using logging to trace sync matching failures
 - **Type System Debugging**: Identifying and fixing ObjectId/string mismatches
@@ -135,7 +135,7 @@
 
 ---
 
-## Using Agentic Coding Tools (Cursor/ChatGPT)
+## Using Agentic Coding Tools (Cursor)
 
 ### What Worked Well
 
@@ -159,7 +159,7 @@
 
 ---
 
-## Conclusions: LLMs in Software Development
+## LLMs in Software Development
 
 ### Appropriate Roles
 
@@ -188,7 +188,5 @@
 
 ## Final Thoughts
 
-This project demonstrated both the power and limitations of LLM-assisted development. The concept-based architecture provided a solid foundation, and the sync engine migration taught valuable lessons about declarative programming. While there were frustrating debugging sessions (especially with sync matching), each challenge provided deeper understanding of the system.
-
-The key takeaway: **LLMs are powerful tools for implementation and debugging, but understanding system architecture and design principles remains essential for making good decisions.**
+This project not only gave me a chance to practice a whole process of developing a software but also demonstrated both the power and limitations of LLM-assisted development. The concept-based architecture provided a solid foundation, and the sync engine migration taught valuable lessons about declarative programming. While there were frustrating debugging sessions (especially with sync matching), each challenge provided deeper understanding of the system. LLMs are powerful tools for implementation and debugging, but understanding system architecture and design principles remains essential for making good decisions.
 
